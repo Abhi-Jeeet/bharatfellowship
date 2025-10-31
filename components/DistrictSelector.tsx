@@ -13,7 +13,6 @@ export default function DistrictSelector({ onChange }: { onChange: (state: strin
 
   // Jharkhand districts
   const districts = [
-    '',
     'Ranchi',
     'East Singhbhum',
     'West Singhbhum',
@@ -100,7 +99,7 @@ export default function DistrictSelector({ onChange }: { onChange: (state: strin
         </select>
 
         <select value={district} onChange={(e) => setDistrict(e.target.value)} className="p-2 rounded border">
-          {districts.map(d => <option key={d} value={d}>{d || 'All districts'}</option>)}
+          {districts.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
 
         <select value={finYear} onChange={(e) => setFinYear(e.target.value)} className="p-2 rounded border">
