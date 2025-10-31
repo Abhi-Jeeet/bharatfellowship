@@ -10,6 +10,7 @@ export default function DistrictSelector({ onChange }: { onChange: (state: strin
     const fy = now.getMonth() >= 3 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
     return fy;
   })
+  const [detectedText, setDetectedText] = useState<string>("")
 
   // Jharkhand districts
   const districts = [
@@ -60,6 +61,7 @@ export default function DistrictSelector({ onChange }: { onChange: (state: strin
         setDistrict(d)
         // optionally set state using addr.state
         if (addr.state) setState(addr.state)
+        setDetectedText(`${d}${addr.state ? `, ${addr.state}` : ''}`)
       } catch (e) {
         console.error(e)
       }
@@ -109,6 +111,9 @@ export default function DistrictSelector({ onChange }: { onChange: (state: strin
         <button onClick={detectLocation} className="px-3 py-2 bg-blue-600 text-white rounded">Auto-detect</button>
       </div>
       <p className="text-xs text-gray-500">Tip: Allow location to auto-select your district</p>
+      {detectedText && (
+        <p className="text-xs text-zinc-600">Detected location: {detectedText}</p>
+      )}
     </div>
   )
 }

@@ -297,10 +297,10 @@ export default function Page() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-        <MetricCard accent="emerald" title={`इस महीने लाभार्थी — ${currentMonthShort} · ${currentFY}`} value={formatNumber(households)} note="Households worked (current month)" />
-        <MetricCard accent="sky" title={`काम करने वाले व्यक्ति — ${currentMonthShort} · ${currentFY}`} value={formatNumber(individuals)} note="Individuals worked (current month)" />
-        <MetricCard accent="amber" title={`औसत वेतन (₹) — ${currentMonthShort} · ${currentFY}`} value={formatNumber(avgWage)} note={`Paid within 15 days: ${formatNumber(pct15)}%`} />
+      <section id="highlights" className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <MetricCard icon={<span>🏠</span>} accent="emerald" title={`इस महीने लाभार्थी — ${currentMonthShort} · ${currentFY}`} value={formatNumber(households)} note="Households worked (current month)" />
+        <MetricCard icon={<span>👷</span>} accent="sky" title={`काम करने वाले व्यक्ति — ${currentMonthShort} · ${currentFY}`} value={formatNumber(individuals)} note="Individuals worked (current month)" />
+        <MetricCard icon={<span>₹</span>} accent="amber" title={`औसत वेतन (₹) — ${currentMonthShort} · ${currentFY}`} value={formatNumber(avgWage)} note={`Paid within 15 days: ${formatNumber(pct15)}%`} />
       </section>
 
       <MetricInfo />
@@ -316,13 +316,13 @@ export default function Page() {
         </div>
       </section>
 
-      <section className="mb-4">
+      <section id="trends" className="mb-4">
         {loading ? <div className="text-center py-12">Loading...</div> :
           <TrendChart key={`${state}-${district}-${finYear}`} data={trend} />
         }
       </section>
 
-      <section>
+      <section id="monthly">
         <div className="mb-2 flex items-center gap-2">
           <h2 className="text-lg font-semibold">Monthly data</h2>
           <div className="ml-auto flex items-center gap-2">
