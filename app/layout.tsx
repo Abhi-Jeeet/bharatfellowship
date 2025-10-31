@@ -16,6 +16,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <p className="text-xs sm:text-sm text-zinc-600">Select your state, district and financial year to view simple metrics</p>
           </div>
         </header>
+        <link rel="manifest" href="/manifest.json" />
+        <script dangerouslySetInnerHTML={{__html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+              navigator.serviceWorker.register('/sw.js').catch(()=>{});
+            });
+          }
+        `}} />
         {children}
         <footer className="py-6 text-center text-xs text-zinc-500">Data: data.gov.in • For outages, cached last-good data may be shown</footer>
       </body>

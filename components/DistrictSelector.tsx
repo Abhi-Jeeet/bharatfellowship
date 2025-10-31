@@ -2,8 +2,8 @@
 import { useState, useEffect } from "react"
 
 export default function DistrictSelector({ onChange }: { onChange: (state: string, district: string, finYear: string) => void }) {
-  const [state, setState] = useState(process.env.NEXT_PUBLIC_DEFAULT_STATE || 'Uttar Pradesh')
-  const [district, setDistrict] = useState('Agra')
+  const [state, setState] = useState('Jharkhand')
+  const [district, setDistrict] = useState('Ranchi')
   const [finYear, setFinYear] = useState<string>(() => {
     const now = new Date();
     const y = now.getFullYear();
@@ -11,10 +11,33 @@ export default function DistrictSelector({ onChange }: { onChange: (state: strin
     return fy;
   })
 
-  // minimal list to start — expand as needed
-  const districts = state === 'Bihar'
-    ? ['Patna', 'Gaya', 'Muzaffarpur', 'Ara']
-    : ['Agra', 'Lucknow', 'Varanasi', 'Prayagraj']
+  // Jharkhand districts
+  const districts = [
+    'Ranchi',
+    'East Singhbhum',
+    'West Singhbhum',
+    'Seraikela Kharsawan',
+    'Dhanbad',
+    'Bokaro',
+    'Hazaribagh',
+    'Giridih',
+    'Koderma',
+    'Chatra',
+    'Palamu',
+    'Garhwa',
+    'Latehar',
+    'Lohardaga',
+    'Gumla',
+    'Simdega',
+    'Khunti',
+    'Ramgarh',
+    'Deoghar',
+    'Dumka',
+    'Jamtara',
+    'Godda',
+    'Pakur',
+    'Sahebganj'
+  ]
 
   useEffect(() => {
     onChange(state, district, finYear)
@@ -48,20 +71,31 @@ export default function DistrictSelector({ onChange }: { onChange: (state: strin
   const finYears = (() => {
     const out: string[] = [];
     const now = new Date();
-    const base = now.getFullYear();
-    for (let i = 0; i < 7; i++) {
-      const y = base - i;
-      out.push(`${y - 1}-${y}`);
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    // Indian FY: Apr (3) to Mar (2). If we're in Apr or later, current FY is currentYear-currentYear+1
+    const currentFYEnd = currentMonth >= 3 ? currentYear + 1 : currentYear;
+    
+    // Always include up to 2025-2026 (end year 2026)
+    const maxEndYear = 2026;
+    const startEndYear = Math.max(currentFYEnd, maxEndYear);
+    
+    // Generate from startEndYear backwards for 8 years
+    for (let i = 0; i < 8; i++) {
+      const endYear = startEndYear - i;
+      if (endYear >= 2020) { // Don't go too far back
+        out.push(`${endYear - 1}-${endYear}`);
+      }
     }
-    return out;
+    
+    return out; // Most recent first
   })();
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2 items-center">
         <select value={state} onChange={(e) => setState(e.target.value)} className="p-2 rounded border">
-          <option>Uttar Pradesh</option>
-          <option>Bihar</option>
+          <option>Jharkhand</option>
         </select>
 
         <select value={district} onChange={(e) => setDistrict(e.target.value)} className="p-2 rounded border">
