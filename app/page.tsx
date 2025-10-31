@@ -14,6 +14,7 @@ export default function Page() {
     return now.getMonth() >= 3 ? `${y}-${y + 1}` : `${y - 1}-${y}`
   })
   const [records, setRecords] = useState<any[]>([])
+  const [rawRecords, setRawRecords] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [view, setView] = useState<'cards'|'table'>("cards")
   const [compare, setCompare] = useState(false)
@@ -25,6 +26,9 @@ export default function Page() {
   const [offset, setOffset] = useState<number>(0)
   const [loadingAll, setLoadingAll] = useState<boolean>(false)
   const [kpiRecord, setKpiRecord] = useState<any>({})
+  const [modalOpen, setModalOpen] = useState<boolean>(false)
+  const [modalMonth, setModalMonth] = useState<string>("")
+  const [modalFY, setModalFY] = useState<string>("")
 
   // Current month/year (calendar) and current FY string (Apr–Mar)
   const monthShort = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
@@ -97,6 +101,7 @@ export default function Page() {
       setCacheStatus(source === 'cache' ? 'Server cache (1hr TTL)' : source === 'cache-stale' ? 'Stale cache (upstream failed)' : 'Fresh from API')
       
       const recs: any[] = json.records || []
+      setRawRecords(recs)
       setDataCount({ received: recs.length, total: json.total })
       
       // De-duplicate by month within FY (pick latest snapshot - highest cumulative values)
@@ -340,7 +345,7 @@ export default function Page() {
         {view==='cards' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
             {records.slice(0, 24).map((r,i)=> (
-              <div key={i} className="bg-white rounded-xl shadow-sm ring-1 ring-emerald-200 p-3">
+              <button key={i} onClick={()=>{ setModalMonth(r.month); setModalFY(r.fin_year); setModalOpen(true) }} className="text-left bg-white rounded-xl shadow-sm ring-1 ring-emerald-200 p-3 hover:ring-emerald-300">
                 <div className="flex justify-between items-center mb-2">
                   <div className="font-semibold text-zinc-800">{r.month} · {r.fin_year}</div>
                   <div className="text-xs text-zinc-500">{r.district_name}</div>
@@ -353,7 +358,7 @@ export default function Page() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         ) : (
@@ -388,6 +393,18 @@ export default function Page() {
             <CompareCard title={`Individuals worked · ${districtB}`} data={recordsB} />
           </div>
         </section>
+      )}
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3" onClick={()=>setModalOpen(false)}>
+          <div className="bg-white max-w-5xl w-full rounded-xl shadow-xl ring-1 ring-zinc-200 p-4" onClick={(e)=>e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold">Monthly history — {modalMonth} · {modalFY} — {state} / {district}</h3>
+              <button onClick={()=>setModalOpen(false)} className="px-3 py-1 rounded bg-zinc-100">Close</button>
+            </div>
+            <MonthSnapshots recs={rawRecords} month={modalMonth} finYear={modalFY} />
+          </div>
+        </div>
       )}
       </main>
   )
@@ -426,6 +443,34 @@ function CompareCard({ title, data }: { title: string; data: any[] }) {
     <div className="bg-white rounded-xl ring-1 ring-zinc-200 p-3">
       <div className="text-sm text-zinc-700 mb-2">{title}</div>
       <TrendChart data={series} />
+    </div>
+  )
+}
+
+function MonthSnapshots({ recs, month, finYear }: { recs: any[]; month: string; finYear: string }) {
+  const keyMatch = (r:any) => String(r.month||'').slice(0,3).toLowerCase() === String(month||'').slice(0,3).toLowerCase() && String(r.fin_year||'') === String(finYear||'')
+  const arr = recs.filter(keyMatch)
+  const score = (x: any) => Number(x.Total_Exp||0)*1000 + Number(x.Total_Individuals_Worked||0)*10 + Number(x.Total_Households_Worked||0)
+  const sorted = arr.sort((a,b)=> score(a)-score(b))
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[70vh] overflow-auto">
+      {sorted.map((r, i) => (
+        <div key={i} className="bg-white rounded-xl ring-1 ring-zinc-200 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="font-semibold">Snapshot {i+1}</div>
+            <div className="text-xs text-zinc-500">{r.district_name}</div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="flex justify-between bg-zinc-50 rounded-lg px-2 py-1"><span className="text-zinc-500">Households</span><span className="font-medium">{Number(r.Total_Households_Worked||0).toLocaleString('en-IN')}</span></div>
+            <div className="flex justify-between bg-zinc-50 rounded-lg px-2 py-1"><span className="text-zinc-500">Individuals</span><span className="font-medium">{Number(r.Total_Individuals_Worked||0).toLocaleString('en-IN')}</span></div>
+            <div className="flex justify-between bg-zinc-50 rounded-lg px-2 py-1"><span className="text-zinc-500">Avg Wage (₹)</span><span className="font-medium">{Number(r.Average_Wage_rate_per_day_per_person||0).toLocaleString('en-IN')}</span></div>
+            <div className="flex justify-between bg-zinc-50 rounded-lg px-2 py-1"><span className="text-zinc-500">Total Exp</span><span className="font-medium">{Number(r.Total_Exp||0).toLocaleString('en-IN')}</span></div>
+            <div className="flex justify-between bg-zinc-50 rounded-lg px-2 py-1"><span className="text-zinc-500">Completed Works</span><span className="font-medium">{Number(r.Number_of_Completed_Works||0).toLocaleString('en-IN')}</span></div>
+            <div className="flex justify-between bg-zinc-50 rounded-lg px-2 py-1"><span className="text-zinc-500">Ongoing Works</span><span className="font-medium">{Number(r.Number_of_Ongoing_Works||0).toLocaleString('en-IN')}</span></div>
+          </div>
+        </div>
+      ))}
+      {sorted.length===0 && <div className="text-sm text-zinc-600">No snapshots found for this month.</div>}
     </div>
   )
 }
