@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
+import { cache } from '@/lib/cache'
 
-type CacheEntry = { ts: number; data: any }
-const CACHE_TTL = 1000 * 60 * 60 // 1 hour
-const cache = new Map<string, CacheEntry>()
+const CACHE_TTL = 1000 * 60 * 60 * 24 // 24 hours
+
+type CacheEntry = { ts: number; data: any; total?: number }
 
 export async function GET(req: Request) {
   const url = new URL(req.url)
@@ -12,11 +13,21 @@ export async function GET(req: Request) {
   const offset = url.searchParams.get('offset') || '0'
   const finYear = url.searchParams.get('fin_year') || ''
 
-  const cacheKey = `${state}::${district}::${finYear}::${limit}::${offset}`
+  const cacheKey = `mgnrega:${state}:${district}:${finYear}:${limit}:${offset}`
   const now = Date.now()
-  const cached = cache.get(cacheKey)
+  
+  // Try to get from cache (Redis or in-memory fallback)
+  const cached = await cache.get<CacheEntry>(cacheKey)
   if (cached && now - cached.ts < CACHE_TTL) {
-    return NextResponse.json({ source: 'cache', records: cached.data, count: cached.data?.length || 0, cachedAt: cached.ts })
+    const cacheType = cache.getCacheType()
+    return NextResponse.json({ 
+      source: 'cache', 
+      records: cached.data, 
+      total: cached.total,
+      count: cached.data?.length || 0, 
+      cachedAt: cached.ts,
+      cacheType 
+    })
   }
 
   // build data.gov.in request
@@ -39,9 +50,19 @@ export async function GET(req: Request) {
   const upstream = `https://api.data.gov.in/resource/${resource}?${params.toString()}`
 
   try {
-    const r = await fetch(upstream, { next: { revalidate: 3600 } })
+    const r = await fetch(upstream, { next: { revalidate: 86400 } }) // 24 hours
     if (!r.ok) {
       const text = await r.text()
+      // On upstream error, try to return stale cache if available
+      if (cached) {
+        return NextResponse.json({ 
+          source: 'cache-stale', 
+          records: cached.data, 
+          total: cached.total,
+          count: cached.data?.length || 0, 
+          cachedAt: cached.ts 
+        })
+      }
       return NextResponse.json({ error: 'Upstream error', details: text }, { status: 502 })
     }
     const json = await r.json()
@@ -60,7 +81,7 @@ export async function GET(req: Request) {
         if (district) p2.append('filters[district_name]', district.toUpperCase())
         if (finYear) p2.append('filters[fin_year]', finYear)
         const u2 = `https://api.data.gov.in/resource/${resource}?${p2.toString()}`
-        const r2 = await fetch(u2, { next: { revalidate: 3600 } })
+        const r2 = await fetch(u2, { next: { revalidate: 86400 } }) // 24 hours
         if (r2.ok) {
           const j2 = await r2.json()
           records = j2.records || []
@@ -71,13 +92,31 @@ export async function GET(req: Request) {
       } catch {}
     }
 
-    // cache
-    cache.set(cacheKey, { ts: now, data: records })
+    // Cache the response (async - fire and forget)
+    const cacheEntry: CacheEntry = { ts: now, data: records, total }
+    cache.set(cacheKey, cacheEntry, CACHE_TTL).catch((err) => {
+      console.error(`[Cache] Failed to cache key "${cacheKey}":`, err)
+    })
 
-    return NextResponse.json({ source: 'upstream', records, total, count: records.length })
+    const cacheType = cache.getCacheType()
+    return NextResponse.json({ 
+      source: 'upstream', 
+      records, 
+      total, 
+      count: records.length,
+      cacheType 
+    })
   } catch (err) {
     // on failure, if cache exists return it
-    if (cached) return NextResponse.json({ source: 'cache-stale', records: cached.data, count: cached.data?.length || 0, cachedAt: cached.ts })
+    if (cached) {
+      return NextResponse.json({ 
+        source: 'cache-stale', 
+        records: cached.data, 
+        total: cached.total,
+        count: cached.data?.length || 0, 
+        cachedAt: cached.ts 
+      })
+    }
     return NextResponse.json({ error: 'Failed to fetch', details: String(err) }, { status: 500 })
   }
 }

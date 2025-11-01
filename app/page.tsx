@@ -98,7 +98,15 @@ export default function Page() {
       const res = await fetch(`/api/mgnrega?state=${encodeURIComponent(s)}&district=${encodeURIComponent(d)}&fin_year=${encodeURIComponent(fy)}&limit=${limit}&offset=${offset}`)
       const json = await res.json()
       const source = json.source || 'unknown'
-      setCacheStatus(source === 'cache' ? 'Server cache (1hr TTL)' : source === 'cache-stale' ? 'Stale cache (upstream failed)' : 'Fresh from API')
+      const cacheType = json.cacheType || ''
+      if (source === 'cache') {
+        const cacheLabel = cacheType === 'Upstash' ? 'Upstash cache (24hr TTL)' : cacheType === 'Redis' ? 'Redis cache (24hr TTL)' : cacheType === 'In-memory' ? 'In-memory cache (24hr TTL)' : 'Server cache (24hr TTL)'
+        setCacheStatus(cacheLabel)
+      } else if (source === 'cache-stale') {
+        setCacheStatus('Stale cache (upstream failed)')
+      } else {
+        setCacheStatus(cacheType ? `Fresh from API (using ${cacheType} cache)` : 'Fresh from API')
+      }
       
       const recs: any[] = json.records || []
       setRawRecords(recs)
