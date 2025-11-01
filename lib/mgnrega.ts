@@ -44,7 +44,7 @@ export async function fetchMgnregaMonthly(
   const resourceId = process.env.MGNREGA_RESOURCE_ID;
 
   const key = buildCacheKey(params);
-  const cached = cache.get(key) as MgnregaResponse | undefined;
+  const cached = await cache.get<MgnregaResponse>(key);
   if (cached) {
     return { ...cached, fromCache: true };
   }
@@ -155,7 +155,7 @@ export async function fetchMgnregaMonthly(
     const value: MgnregaResponse = { ok: true, records, meta };
 
     // Cache for 24h by default
-    cache.set(key, value, 24 * 60 * 60 * 1000);
+    await cache.set(key, value, 24 * 60 * 60 * 1000);
     return value;
   } catch (e) {
     const failure: MgnregaResponse = {
